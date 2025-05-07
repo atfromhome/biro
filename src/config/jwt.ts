@@ -8,8 +8,8 @@ interface JWTConfig {
 
 const config: JWTConfig = {
   options: {
-    expiresIn: (process.env.JWT_EXPIRES_IN as StringValue | undefined | number) ?? '1d',
     algorithm: 'HS256',
+    expiresIn: (process.env.JWT_EXPIRES_IN as number | StringValue | undefined) ?? '1d',
   },
   secret: process.env.JWT_SECRET ?? 'YOUR_SUPER_SECRET_KEY',
 };

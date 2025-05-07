@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
-import { registerCustomerHandler, loginUserHandler } from '~/controllers/auth.controller';
-import { registerFormDataSchema, loginFormDataSchema } from '~/dtos/auth.dto';
+import { loginUserHandler, registerCustomerHandler } from '~/controllers/auth.controller';
+import { loginFormDataSchema, registerFormDataSchema } from '~/dtos/auth.dto';
 import { validateRequest } from '~/middlewares/validate.middleware';
 
 const router = Router();

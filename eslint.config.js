@@ -20,6 +20,6 @@ export default tseslint.config(
       },
     },
   },
-  perfectionist.configs['recommended-line-length'],
+  perfectionist.configs['recommended-alphabetical'],
   prettier,
 );

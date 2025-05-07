@@ -1,11 +1,11 @@
 import { type User } from '@prisma/client';
 
-import type { RegisterInput, LoginInput } from '~/dtos/auth.dto';
+import type { LoginInput, RegisterInput } from '~/dtos/auth.dto';
 
-import { verifyPassword, hashPassword } from '~/utils/hash';
-import { ActionError } from '~/errors/action.error';
-import { generateToken } from '~/utils/jwt';
 import { prisma } from '~/config/database';
+import { ActionError } from '~/errors/action.error';
+import { hashPassword, verifyPassword } from '~/utils/hash';
+import { generateToken } from '~/utils/jwt';
 
 const excludePassword = (user: User): Omit<User, 'password'> => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -16,8 +16,8 @@ const excludePassword = (user: User): Omit<User, 'password'> => {
 
 export const registerCustomerAction = async (
   input: RegisterInput,
-): Promise<{ user: Omit<User, 'password'>; token: string }> => {
-  const { password: plainPassword, email, name } = input;
+): Promise<{ token: string; user: Omit<User, 'password'> }> => {
+  const { email, name, password: plainPassword } = input;
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -32,31 +32,31 @@ export const registerCustomerAction = async (
   const newUser = await prisma.user.create({
     data: {
       createdAt: Math.floor(Date.now() / 1000),
-      updatedAt: Math.floor(Date.now() / 1000),
-      password,
       email,
       name,
+      password,
+      updatedAt: Math.floor(Date.now() / 1000),
     },
   });
 
   const payload = {
     email: newUser.email,
-    userId: newUser.id,
     name: newUser.name,
+    userId: newUser.id,
   };
 
   const token = generateToken(payload);
 
   return {
-    user: excludePassword(newUser),
     token,
+    user: excludePassword(newUser),
   };
 };
 
 export const loginUserAction = async (
   input: LoginInput,
-): Promise<{ user: Omit<User, 'password'>; token: string }> => {
-  const { password, email } = input;
+): Promise<{ token: string; user: Omit<User, 'password'> }> => {
+  const { email, password } = input;
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -74,14 +74,14 @@ export const loginUserAction = async (
 
   const payload = {
     email: user.email,
-    userId: user.id,
     name: user.name,
+    userId: user.id,
   };
 
   const token = generateToken(payload);
 
   return {
-    user: excludePassword(user),
     token,
+    user: excludePassword(user),
   };
 };

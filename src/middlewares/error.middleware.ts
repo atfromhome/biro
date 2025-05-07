@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import type { NextFunction, Response, Request } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
-import { ApiError } from '~/errors/api.error';
 import logger from '~/config/logger';
+import { ApiError } from '~/errors/api.error';
 
 export const errorMiddleware = (
   err: Error,
@@ -12,11 +12,11 @@ export const errorMiddleware = (
   next: NextFunction,
 ): void => {
   const errorContext = {
-    path: req.originalUrl,
-    method: req.method,
-    requestId: req.id,
     body: req.body,
     ip: req.ip,
+    method: req.method,
+    path: req.originalUrl,
+    requestId: req.id,
   };
 
   if (err instanceof ApiError) {
@@ -35,8 +35,8 @@ export const errorMiddleware = (
     res.status(err.statusCode).json({
       error: {
         code: err.errorCode ?? 'UNSPECIFIED_ERROR',
-        message: err.message,
         details: err.details,
+        message: err.message,
       },
     });
   } else {
@@ -44,8 +44,8 @@ export const errorMiddleware = (
 
     res.status(500).json({
       error: {
-        message: 'Terjadi kesalahan internal pada server.',
         code: 'INTERNAL_SERVER_ERROR',
+        message: 'Terjadi kesalahan internal pada server.',
       },
     });
   }

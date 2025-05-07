@@ -1,37 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import type { Response, Express, Request } from 'express';
+import type { Express, Request, Response } from 'express';
 
-import pinoHttp from 'pino-http';
 import express from 'express';
+import pinoHttp from 'pino-http';
 
+import logger from '~/config/logger';
 import { errorMiddleware } from '~/middlewares/error.middleware';
 import authRouter from '~/routes/auth.routes';
-import logger from '~/config/logger';
 
 const app: Express = express();
 
 const httpLogger = pinoHttp({
-  serializers: {
-    req: (req) => {
-      delete req.headers.authorization;
-
-      return {
-        remoteAddress: req.remoteAddress,
-        method: req.method,
-        params: req.params,
-        query: req.query,
-        url: req.url,
-        id: req.id,
-      };
-    },
-    res: (res) => {
-      return {
-        statusCode: res.statusCode,
-      };
-    },
-  },
-
   customLogLevel: function (req, res, err) {
     if (res.statusCode >= 400 && res.statusCode < 500) {
       return 'warn';
@@ -42,7 +22,27 @@ const httpLogger = pinoHttp({
     }
     return 'info';
   },
+
   logger: logger,
+  serializers: {
+    req: (req) => {
+      delete req.headers.authorization;
+
+      return {
+        id: req.id,
+        method: req.method,
+        params: req.params,
+        query: req.query,
+        remoteAddress: req.remoteAddress,
+        url: req.url,
+      };
+    },
+    res: (res) => {
+      return {
+        statusCode: res.statusCode,
+      };
+    },
+  },
 });
 app.use(httpLogger);
 

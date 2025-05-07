@@ -7,8 +7,8 @@ export interface FormattedZodError {
 }
 
 export interface FormattedZodErrorDetail {
-  message: string;
   field: string;
+  message: string;
 }
 
 export const formatZodError = (error: ZodError): FormattedZodError => {
@@ -37,5 +37,5 @@ export const formatZodError = (error: ZodError): FormattedZodError => {
     }
   }
 
-  return { primaryMessage, details };
+  return { details, primaryMessage };
 };

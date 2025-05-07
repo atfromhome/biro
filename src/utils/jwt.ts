@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
-import logger from '~/config/logger';
 import config from '~/config/jwt';
+import logger from '~/config/logger';
 
 const jwtSecret: string = config.secret;
 
@@ -12,18 +12,18 @@ if (jwtSecret === 'YOUR_SUPER_SECRET_KEY' && process.env.NODE_ENV === 'productio
 }
 
 interface JwtPayload {
-  userId: string;
   email: string;
   name: string;
+  userId: string;
 }
 
 export const generateToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, jwtSecret, config.options);
 };
 
-export const verifyToken = (token: string): Pick<JwtPayload, 'userId'> | null => {
+export const verifyToken = (token: string): null | Pick<JwtPayload, 'userId'> => {
   try {
-    const decoded = jwt.verify(token, jwtSecret) as { iat: number; exp: number } & JwtPayload;
+    const decoded = jwt.verify(token, jwtSecret) as { exp: number; iat: number } & JwtPayload;
 
     return { userId: decoded.userId };
   } catch (error) {

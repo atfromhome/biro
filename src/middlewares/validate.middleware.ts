@@ -1,24 +1,24 @@
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import type { NextFunction, Response, Request } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 import { type AnyZodObject } from 'zod';
 import { ZodError } from 'zod';
 
-import { formatZodError } from '~/utils/error-formatter';
 import { ApiError } from '~/errors/api.error';
+import { formatZodError } from '~/utils/error-formatter';
 
 export const validateRequest =
   (schema: AnyZodObject) => async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsedSchema = await schema.safeParseAsync({
+        body: req.body,
         params: req.params,
         query: req.query,
-        body: req.body,
       });
 
       if (!parsedSchema.success) {
-        const { primaryMessage, details } = formatZodError(parsedSchema.error);
+        const { details, primaryMessage } = formatZodError(parsedSchema.error);
 
         throw new ApiError(400, primaryMessage, 'VALIDATION_ERROR', details);
       }
@@ -42,7 +42,7 @@ export const validateRequest =
       }
 
       if (error instanceof ZodError) {
-        const { primaryMessage, details } = formatZodError(error);
+        const { details, primaryMessage } = formatZodError(error);
 
         return next(new ApiError(400, primaryMessage, 'VALIDATION_ERROR', details));
       }

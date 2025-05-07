@@ -14,16 +14,16 @@ const pinoOptions: LoggerOptions = {
       return { level: label.toUpperCase() };
     },
   },
-  timestamp: pino.stdTimeFunctions.isoTime, // Format timestamp ISO
   level: logLevel,
+  timestamp: pino.stdTimeFunctions.isoTime, // Format timestamp ISO
 };
 
 if (nodeEnv === 'development') {
   pinoOptions.transport = {
     options: {
-      translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
-      ignore: 'pid,hostname',
       colorize: true,
+      ignore: 'pid,hostname',
+      translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
     },
     target: 'pino-pretty',
   };

@@ -1,7 +1,7 @@
 import { prisma } from '~/config/database';
 
-import logger from './config/logger';
 import app from './app';
+import logger from './config/logger';
 
 const port = process.env.APP_PORT ?? '9000';
 
