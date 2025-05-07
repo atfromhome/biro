@@ -8,6 +8,7 @@ import pinoHttp from 'pino-http';
 import logger from '~/config/logger';
 import { errorMiddleware } from '~/middlewares/error.middleware';
 import authRouter from '~/routes/auth.routes';
+import userRouter from '~/routes/user.routes';
 
 const app: Express = express();
 
@@ -54,6 +55,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/users', userRouter);
 
 app.use(errorMiddleware);
 

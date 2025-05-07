@@ -11,21 +11,28 @@ if (jwtSecret === 'YOUR_SUPER_SECRET_KEY' && process.env.NODE_ENV === 'productio
   throw Error('Error : Please set JWT_SECRET env you using YOUR_SUPER_SECRET_KEY in production');
 }
 
-interface JwtPayload {
+export type GenerateTokenInputPayload = JwtPayload;
+
+export interface JwtPayload {
   email: string;
   name: string;
   userId: string;
 }
+export type VerifiedTokenOutput = JwtPayload;
 
-export const generateToken = (payload: JwtPayload): string => {
+export const generateToken = (payload: GenerateTokenInputPayload): string => {
   return jwt.sign(payload, jwtSecret, config.options);
 };
 
-export const verifyToken = (token: string): null | Pick<JwtPayload, 'userId'> => {
+export const verifyToken = (token: string): null | VerifiedTokenOutput => {
   try {
     const decoded = jwt.verify(token, jwtSecret) as { exp: number; iat: number } & JwtPayload;
 
-    return { userId: decoded.userId };
+    return {
+      email: decoded.email,
+      name: decoded.name,
+      userId: decoded.userId,
+    };
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       logger.warn(
