@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+generator json {
+  provider = "prisma-json-types-generator"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  AGENT
+  CUSTOMER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  LOCKED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model User {
+  id              String  @db.VarChar(26)   @id @default(ulid())
+  name            String  @db.VarChar(100)
+  email           String  @db.VarChar(150)  @unique
+  password        String  @db.VarChar(255)
+  createdAt       Int?    @db.Integer       @map("created_at")
+  updatedAt       Int?    @db.Integer       @map("updated_at")
+
+  ownedTeams      Team[]
+  teamMemberships UserTeam[]
+
+  ticketsCreated  Ticket[]   @relation("TicketCreator")
+  ticketsAssigned Ticket[]   @relation("TicketAssignee")
+
+  comments        Comment[]
+
+  @@map("users")
+}
+
+model Team {
+  id                  String      @db.VarChar(26)   @id @default(ulid())
+  slug                String      @db.VarChar(100)  @unique
+  name                String      @db.VarChar(100)
+  ownerId             String      @db.VarChar(26)   @map("owner_id")
+
+  ticketLastNumber    Int         @db.Integer       @default(0)  @map("ticket_last_number")
+  ticketPrefixNumber  String?     @db.VarChar(5)    @map("ticket_prefix_number")
+  
+  createdAt           Int?        @db.Integer       @map("created_at")
+  updatedAt           Int?        @db.Integer       @map("updated_at")
+
+  owner               User        @relation(fields: [ownerId], references: [id])
+  members             UserTeam[]
+  tickets             Ticket[]
+  categories          Category[]
+  labels              Label[]
+
+  @@map("teams")
+}
+
+model UserTeam {
+  userId    String  @db.VarChar(26)   @map("user_id")
+  teamId    String  @db.VarChar(26)   @map("team_id")
+  role      Role
+  joinedAt  Int?    @db.Integer       @map("joined_at")
+
+  user      User    @relation(fields: [userId], references: [id])
+  team      Team    @relation(fields: [teamId], references: [id])
+
+  @@map("user_teams")
+  @@id([userId, teamId])
+}
+
+model Ticket {
+  id              String          @db.VarChar(26)   @id @default(ulid())
+  number          String          @db.VarChar(26)
+  subject         String          @db.VarChar(100)
+  description     String          @db.Text
+  status          TicketStatus    @default(OPEN) 
+  priority        TicketPriority  @default(MEDIUM)
+
+  teamId          String          @db.VarChar(26)   @map("team_id")
+  creatorId       String          @db.VarChar(26)   @map("creator_id")
+  assignedAgentId String?         @db.VarChar(26)   @map("assigned_agent_id")
+
+  assignedAt      Int?            @db.Integer     @map("assigned_at")
+  resolvedAt      Int?            @db.Integer       @map("resolved_at")
+  closedAt        Int?            @db.Integer       @map("closed_at")
+  lookedAt        Int?            @db.Integer       @map("looked_at")
+
+  categoryId      String?         @db.VarChar(26)   @map("category_id")
+
+  createdAt       Int?            @db.Integer       @map("created_at")
+  updatedAt       Int?            @db.Integer       @map("updated_at")
+
+  team            Team            @relation(fields: [teamId], references: [id])
+  creator         User            @relation("TicketCreator", fields: [creatorId], references: [id])
+  assignedAgent   User?           @relation("TicketAssignee", fields: [assignedAgentId], references: [id])
+  comments        Comment[]
+  category        Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  ticketLabels    TicketLabel[]
+
+  @@unique([teamId, number], name: "tickets_team_id_number_key")
+
+  @@map("tickets")
+}
+
+model Comment {
+  id              String    @db.VarChar(26) @id @default(uuid())
+  content         String    @db.Text
+  
+  ticketId        String    @db.VarChar(26) @map("ticket_id")
+  userId          String    @db.VarChar(26) @map("user_id")
+  
+  isInternalNote  Boolean   @default(false) @map("is_internal_note")
+
+  createdAt       Int?      @db.Integer     @map("created_at")
+  updatedAt       Int?      @db.Integer     @map("updated_at")
+
+  ticket          Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author          User      @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+}
+
+model Category {
+  id            String    @db.VarChar(26) @id @default(uuid())
+  name          String    @db.VarChar(100)
+  description   String?   @db.Text
+  teamId        String    @db.VarChar(26) @map("team_id")
+  createdAt     Int?      @db.Integer     @map("created_at")
+  updatedAt     Int?      @db.Integer     @map("updated_at")
+
+  team          Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tickets       Ticket[]
+
+  @@map("categories")
+}
+
+model Label {
+  id            String        @db.VarChar(26)   @id @default(uuid())
+  name          String        @db.VarChar(100)
+  color         String        @db.VarChar(10)
+  teamId        String        @db.VarChar(26)   @map("team_id")
+  createdAt     Int?          @db.Integer       @map("created_at")
+  updatedAt     Int?          @db.Integer       @map("updated_at")
+
+  team          Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  ticketLabels  TicketLabel[]
+
+  @@map("labels")
+}
+
+model TicketLabel {
+  ticketId    String    @db.VarChar(26) @map("ticket_id")
+  labelId     String    @db.VarChar(26) @map("label_id")
+  assignedAt  Int       @db.Integer     @map("assigned_at")
+
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  label       Label     @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([ticketId, labelId])
+  @@map("ticket_labels")
+}
