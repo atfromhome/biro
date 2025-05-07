@@ -27,9 +27,18 @@ const httpLogger = pinoHttp({
   logger: logger,
   serializers: {
     req: (req) => {
-      delete req.headers.authorization;
+      const loggedHeaders: Record<string, string | string[] | undefined> = {};
+
+      if (req.headers) {
+        loggedHeaders.authorization = '[REDACTED]';
+      }
+
+      if (req.headers['user-agent']) {
+        loggedHeaders['user-agent'] = req.headers['user-agent'];
+      }
 
       return {
+        headers: loggedHeaders,
         id: req.id,
         method: req.method,
         params: req.params,
