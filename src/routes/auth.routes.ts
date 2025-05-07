@@ -1,15 +1,13 @@
 import { Router } from 'express';
 
-import { registerCustomerHandler } from '~/controllers/auth.controller';
+import { registerCustomerHandler, loginUserHandler } from '~/controllers/auth.controller';
+import { registerFormDataSchema, loginFormDataSchema } from '~/dtos/auth.dto';
 import { validateRequest } from '~/middlewares/validate.middleware';
-import { registerCutomerFormDataSchema } from '~/dtos/auth.dto';
 
 const router = Router();
 
-router.post(
-  '/customer/register',
-  validateRequest(registerCutomerFormDataSchema),
-  registerCustomerHandler,
-);
+router.post('/register', validateRequest(registerFormDataSchema), registerCustomerHandler);
+
+router.post('/login', validateRequest(loginFormDataSchema), loginUserHandler);
 
 export default router;

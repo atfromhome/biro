@@ -2,6 +2,7 @@
 import type { NextFunction, Response, Request } from 'express';
 
 import { ApiError } from '~/errors/api.error';
+import logger from '~/config/logger';
 
 export const errorMiddleware = (
   err: Error,
@@ -10,7 +11,27 @@ export const errorMiddleware = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction,
 ): void => {
+  const errorContext = {
+    path: req.originalUrl,
+    method: req.method,
+    requestId: req.id,
+    body: req.body,
+    ip: req.ip,
+  };
+
   if (err instanceof ApiError) {
+    if (err.statusCode >= 500) {
+      logger.error(
+        { context: errorContext, details: err.details, err },
+        `ApiError (Server): ${err.message}`,
+      );
+    } else {
+      logger.warn(
+        { context: errorContext, details: err.details, err },
+        `ApiError (Client): ${err.message}`,
+      );
+    }
+
     res.status(err.statusCode).json({
       error: {
         code: err.errorCode ?? 'UNSPECIFIED_ERROR',
@@ -19,7 +40,7 @@ export const errorMiddleware = (
       },
     });
   } else {
-    console.error('UNEXPECTED ERROR:', err);
+    logger.error({ context: errorContext, err }, `UNEXPECTED ERROR: ${err.message}`);
 
     res.status(500).json({
       error: {

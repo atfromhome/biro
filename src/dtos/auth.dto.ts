@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const registerCutomerFormDataSchema = z.object({
+export const registerFormDataSchema = z.object({
   body: z.object({
     password: z
       .string({ required_error: 'Kata sandi harus diisi' })
@@ -17,4 +17,19 @@ export const registerCutomerFormDataSchema = z.object({
   }),
 });
 
-export type RegisterCustomerInput = z.infer<typeof registerCutomerFormDataSchema>['body'];
+export type RegisterInput = z.infer<typeof registerFormDataSchema>['body'];
+
+export const loginFormDataSchema = z.object({
+  body: z.object({
+    password: z
+      .string({ required_error: 'Kata sandi harus diisi' })
+      .trim()
+      .min(1, { message: 'Kata sandi harus diisi' }),
+    email: z
+      .string({ required_error: 'Alamat email harus diisi' })
+      .trim()
+      .email({ message: 'Alamat email tidak valid' }),
+  }),
+});
+
+export type LoginInput = z.infer<typeof loginFormDataSchema>['body'];
