@@ -31,6 +31,8 @@ export const registerCustomerAction = async (
 
   const newUser = await prisma.user.create({
     data: {
+      createdAt: Math.floor(Date.now() / 1000),
+      updatedAt: Math.floor(Date.now() / 1000),
       password,
       email,
       name,
