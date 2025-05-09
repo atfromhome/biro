@@ -1,6 +1,11 @@
-import { Role, type Ticket, TicketPriority, TicketStatus, type User } from '@prisma/client';
+import { Prisma, Role, type Ticket, TicketPriority, TicketStatus, type User } from '@prisma/client';
 
-import type { CreateTicketInput } from '~/dtos/ticket.dto';
+import type {
+  CreateTicketInput,
+  GetTicketsQueryInput,
+  PaginatedTicketsResponse,
+  TicketListItemOutput,
+} from '~/dtos/ticket.dto';
 
 import { prisma } from '~/config/database';
 import logger from '~/config/logger';
@@ -139,5 +144,113 @@ export const createTicketAction = async (
     }
 
     throw new ActionError('Gagal menyimpan tiket ke database.');
+  }
+};
+
+export const getMyCreatedTicketsAction = async (
+  userId: string,
+  query: GetTicketsQueryInput,
+): Promise<PaginatedTicketsResponse> => {
+  const {
+    limit = 15,
+    page = 1,
+    priority,
+    q,
+    sortBy = 'created_at',
+    sortDirection = 'desc',
+    status,
+    teamId,
+  } = query;
+
+  const skip = (page - 1) * limit;
+
+  const whereConditions: Prisma.TicketWhereInput = {
+    creatorId: userId,
+    ...(status && { status }),
+    ...(priority && { priority }),
+    ...(q && {
+      OR: [
+        {
+          subject: {
+            contains: q,
+            mode: 'insensitive',
+          },
+        },
+        {
+          description: {
+            contains: q,
+            mode: 'insensitive',
+          },
+        },
+      ],
+    }),
+    ...(teamId && { teamId }),
+  };
+
+  const orderByOptions: Prisma.TicketOrderByWithRelationInput = {
+    [sortBy]: sortDirection,
+  };
+
+  logger.debug(
+    { limit, orderByOptions, query, skip, userId, whereConditions },
+    "Fetching user's created tickets",
+  );
+
+  try {
+    const [tickets, totalTickets] = await prisma.$transaction([
+      prisma.ticket.findMany({
+        orderBy: orderByOptions,
+        select: {
+          category: { select: { id: true, name: true } },
+          createdAt: true,
+          id: true,
+          number: true,
+          priority: true,
+          status: true,
+          subject: true,
+          team: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              ticketPrefixNumber: true,
+            },
+          },
+          ticketLabels: { include: { label: true } },
+          updatedAt: true,
+        },
+        skip: skip,
+        take: limit,
+        where: whereConditions,
+      }),
+      prisma.ticket.count({ where: whereConditions }),
+    ]);
+
+    const totalPages = Math.ceil(totalTickets / limit);
+
+    const formattedTickets: TicketListItemOutput[] = tickets.map((ticket) => ({
+      category: ticket.category,
+      createdAt: ticket.createdAt,
+      id: ticket.id,
+      labels: ticket.ticketLabels.map((tl) => tl.label),
+      number: ticket.number,
+      priority: ticket.priority,
+      status: ticket.status,
+      subject: ticket.subject,
+      team: ticket.team,
+      updatedAt: ticket.updatedAt,
+    }));
+
+    return {
+      currentPage: page,
+      data: formattedTickets,
+      limit,
+      totalPages,
+      totalTickets,
+    };
+  } catch (error) {
+    logger.error({ err: error, query, userId }, "Error fetching user's created tickets");
+
+    throw new ActionError('Gagal mengambil daftar tiket Anda.');
   }
 };

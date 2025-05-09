@@ -5,6 +5,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { type AnyZodObject } from 'zod';
 import { ZodError } from 'zod';
 
+import { ApiErrorCode } from '~/constants/errorCodes';
 import { ApiError } from '~/errors/api.error';
 import { formatZodError } from '~/utils/error-formatter';
 
@@ -20,7 +21,7 @@ export const validateRequest =
       if (!parsedSchema.success) {
         const { details, primaryMessage } = formatZodError(parsedSchema.error);
 
-        throw new ApiError(400, primaryMessage, 'VALIDATION_ERROR', details);
+        throw new ApiError(400, primaryMessage, ApiErrorCode.VALIDATION_ERROR, details);
       }
 
       if (parsedSchema.data.body) {
@@ -44,11 +45,15 @@ export const validateRequest =
       if (error instanceof ZodError) {
         const { details, primaryMessage } = formatZodError(error);
 
-        return next(new ApiError(400, primaryMessage, 'VALIDATION_ERROR', details));
+        return next(new ApiError(400, primaryMessage, ApiErrorCode.VALIDATION_ERROR, details));
       }
 
       return next(
-        new ApiError(500, 'Terjadi kesalahan validasi internal.', 'INTERNAL_SERVER_ERROR'),
+        new ApiError(
+          500,
+          'Terjadi kesalahan validasi internal.',
+          ApiErrorCode.INTERNAL_SERVER_ERROR,
+        ),
       );
     }
   };
