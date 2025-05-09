@@ -99,7 +99,7 @@ model Ticket {
   creatorId       String          @db.VarChar(26)   @map("creator_id")
   assignedAgentId String?         @db.VarChar(26)   @map("assigned_agent_id")
 
-  assignedAt      Int?            @db.Integer     @map("assigned_at")
+  assignedAt      Int?            @db.Integer       @map("assigned_at")
   resolvedAt      Int?            @db.Integer       @map("resolved_at")
   closedAt        Int?            @db.Integer       @map("closed_at")
   lookedAt        Int?            @db.Integer       @map("looked_at")
