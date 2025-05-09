@@ -92,3 +92,38 @@ export interface TicketListItemOutput {
   };
   updatedAt: null | number;
 }
+
+export const updateTicketCoreInfoFormDataSchema = z.object({
+  body: z
+    .object({
+      description: z
+        .string({ invalid_type_error: 'Deskripsi harus berupa string' })
+        .trim()
+        .min(10, { message: 'Deskripsi minimal 10 karakter' })
+        .optional(),
+      subject: z
+        .string({ invalid_type_error: 'Subjek harus berupa string' })
+        .trim()
+        .min(10, { message: 'Subjek minimal 10 karakter' })
+        .max(100, { message: 'Subjek maksimal 100 karakter' })
+        .optional(),
+    })
+    .refine((data) => data.subject !== undefined || data.description !== undefined, {
+      message:
+        'Setidaknya satu field (subject atau description) harus diisi untuk melakukan update',
+    }),
+
+  params: z.object({
+    teamId: z
+      .string({ required_error: 'Team ID pada path URL wajib diisi.' })
+      .trim()
+      .min(1, 'Team ID pada path URL tidak boleh kosong.'),
+    ticketId: z
+      .string({ required_error: 'Ticket ID pada path URL wajib diisi.' })
+      .trim()
+      .min(1, 'Ticket ID pada path URL tidak boleh kosong.'),
+  }),
+});
+
+export type UpdateTicketCoreInput = z.infer<typeof updateTicketCoreInfoFormDataSchema>['body'];
+export type UpdateTicketParams = z.infer<typeof updateTicketCoreInfoFormDataSchema>['params'];

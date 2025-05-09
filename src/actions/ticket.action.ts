@@ -5,6 +5,7 @@ import type {
   GetTicketsQueryInput,
   PaginatedTicketsResponse,
   TicketListItemOutput,
+  UpdateTicketCoreInput,
 } from '~/dtos/ticket.dto';
 
 import { prisma } from '~/config/database';
@@ -252,5 +253,172 @@ export const getMyCreatedTicketsAction = async (
     logger.error({ err: error, query, userId }, "Error fetching user's created tickets");
 
     throw new ActionError('Gagal mengambil daftar tiket Anda.');
+  }
+};
+
+type UpdatedTicketOutput = Partial<Ticket>;
+
+export const updateTicketCoreInfoAction = async (
+  actor: Actor,
+  teamId: string,
+  ticketId: string,
+  input: UpdateTicketCoreInput,
+): Promise<UpdatedTicketOutput> => {
+  const { description, subject } = input;
+
+  logger.debug(
+    { actorId: actor.id, input, teamId, ticketId },
+    'Attempting to update ticket core info',
+  );
+
+  const ticketToUpdate = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+  });
+
+  if (!ticketToUpdate) {
+    logger.warn(
+      { actorId: actor.id, ticketId },
+      `Ticket update attempt: Ticket [${ticketId}] not found.`,
+    );
+
+    throw new ActionError(
+      `Tiket dengan ID '${ticketId}' tidak ditemukan.`,
+      ApiErrorCode.RESOURCE_NOT_FOUND,
+    );
+  }
+
+  if (ticketToUpdate.teamId !== teamId) {
+    logger.warn(
+      { actorId: actor.id, actualTeamId: ticketToUpdate.teamId, requestedTeamId: teamId, ticketId },
+      `Ticket update attempt: Ticket [${ticketId}] does not belong to team [${teamId}].`,
+    );
+    throw new ActionError(
+      `Akses ditolak. Tiket ini bukan bagian dari tim yang Anda akses.`,
+      ApiErrorCode.RESOURCE_FORBIDDEN,
+    );
+  }
+
+  if (
+    ticketToUpdate.status === TicketStatus.CLOSED ||
+    ticketToUpdate.status === TicketStatus.LOCKED
+  ) {
+    logger.warn(
+      { actorId: actor.id, status: ticketToUpdate.status, ticketId },
+      `Ticket update attempt DENIED: Ticket is [${ticketToUpdate.status}].`,
+    );
+    throw new ActionError(
+      `Tiket yang sudah '${ticketToUpdate.status}' tidak dapat diubah lagi detailnya.`,
+      ApiErrorCode.RESOURCE_FORBIDDEN,
+    );
+  }
+
+  const actorMembership = await prisma.userTeam.findUnique({
+    where: { userId_teamId: { teamId: ticketToUpdate.teamId, userId: actor.id } },
+  });
+
+  let canUpdate = false;
+  const allowedRolesSet = new Set<Role>([Role.ADMIN, Role.AGENT, Role.OWNER]);
+
+  if (actorMembership && allowedRolesSet.has(actorMembership.role)) {
+    canUpdate = true;
+
+    logger.info(
+      `Actor [${actor.id}] with role [${actorMembership.role}] is authorized to update ticket [${ticketId}]`,
+    );
+  } else if (ticketToUpdate.creatorId === actor.id) {
+    if (ticketToUpdate.status === TicketStatus.OPEN) {
+      canUpdate = true;
+      logger.info(
+        `Actor (creator) [${actor.id}] is authorized to update ticket [${ticketId}] (status: OPEN)`,
+      );
+    } else {
+      logger.warn(
+        `Actor (creator) [${actor.id}] DENIED update for ticket [${ticketId}]. Status is [${ticketToUpdate.status}], not OPEN.`,
+      );
+    }
+  } else {
+    logger.warn(
+      {
+        actorId: actor.id,
+        actorRoleInTeam: actorMembership?.role ?? 'Not a member',
+        creatorId: ticketToUpdate.creatorId,
+        ticketId,
+        ticketStatus: ticketToUpdate.status,
+      },
+      `Actor is not the creator and not a privileged member for ticket update. DENIED.`,
+    );
+  }
+
+  if (!canUpdate) {
+    throw new ActionError(
+      'Anda tidak memiliki izin untuk memperbarui detail tiket ini atau tiket tidak dalam status yang memungkinkan pembaruan oleh Anda.',
+      ApiErrorCode.RESOURCE_FORBIDDEN,
+    );
+  }
+
+  const dataToUpdate: { description?: string; subject?: string; updatedAt?: number } = {};
+  let hasChanges = false;
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (subject !== undefined && subject !== null && subject !== ticketToUpdate.subject) {
+    dataToUpdate.subject = subject;
+    dataToUpdate.updatedAt = Math.floor(Date.now() / 1000);
+    hasChanges = true;
+  }
+
+  if (
+    description !== undefined &&
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    description !== null &&
+    description !== ticketToUpdate.description
+  ) {
+    dataToUpdate.description = description;
+    dataToUpdate.updatedAt = Math.floor(Date.now() / 1000);
+    hasChanges = true;
+  }
+
+  if (!hasChanges) {
+    logger.info(
+      { actorId: actor.id, ticketId },
+      'Ticket update attempt: No actual changes provided for subject or description. Returning current ticket data.',
+    );
+
+    return {
+      createdAt: ticketToUpdate.createdAt,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      description: ticketToUpdate.description ?? '',
+      id: ticketToUpdate.id,
+      number: ticketToUpdate.number,
+      priority: ticketToUpdate.priority,
+      status: ticketToUpdate.status,
+      subject: ticketToUpdate.subject,
+      updatedAt: ticketToUpdate.updatedAt,
+    };
+  }
+
+  try {
+    const updatedTicket = await prisma.ticket.update({
+      data: dataToUpdate,
+      select: {
+        createdAt: true,
+        description: true,
+        id: true,
+        number: true,
+        priority: true,
+        status: true,
+        subject: true,
+        updatedAt: true,
+      },
+      where: { id: ticketId },
+    });
+
+    logger.info(`Ticket [${ticketId}] core info updated successfully by actor [${actor.id}]`);
+    return updatedTicket;
+  } catch (error) {
+    logger.error(
+      { actorId: actor.id, dataToUpdate, err: error, ticketId },
+      'Error updating ticket core info in database',
+    );
+    throw new ActionError('Gagal memperbarui tiket di database.');
   }
 };
