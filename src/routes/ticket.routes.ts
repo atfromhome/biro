@@ -1,24 +1,49 @@
 import { Router } from 'express';
 
-import { createTicketHandler, updateTicketCoreInfoHandler } from '~/controllers/ticket.controller';
-import { createTicketFormDataSchema, updateTicketCoreInfoFormDataSchema } from '~/dtos/ticket.dto'; // Skema DTO tiket
-import { authenticateRequest } from '~/middlewares/auth.middleware'; // Middleware autentikasi
-import { validateRequest } from '~/middlewares/validate.middleware'; // Middleware validasi
+import {
+  createTicketHandler,
+  getTicketDetailHandler,
+  updateTicketCategoryHandler,
+  updateTicketCoreInfoHandler,
+  updateTicketPriorityHandler,
+} from '~/controllers/ticket.controller';
+import {
+  createTicketFormDataSchema,
+  getTicketDetailParamsSchema,
+  updateTicketCategoryFormDataSchema,
+  updateTicketCoreInfoFormDataSchema,
+  updateTicketPriorityFormDataSchema,
+} from '~/dtos/ticket.dto';
+import { authenticateRequest } from '~/middlewares/auth.middleware';
+import { validateRequest } from '~/middlewares/validate.middleware';
+
+import commentRouter from './comment.routes';
 
 const router = Router({ mergeParams: true });
 
-router.post(
-  '/',
-  authenticateRequest,
-  validateRequest(createTicketFormDataSchema),
-  createTicketHandler,
-);
+router.use(authenticateRequest);
+
+router.post('/', validateRequest(createTicketFormDataSchema), createTicketHandler);
+router.get('/:ticketId', validateRequest(getTicketDetailParamsSchema), getTicketDetailHandler);
 
 router.patch(
   '/:ticketId',
-  authenticateRequest,
   validateRequest(updateTicketCoreInfoFormDataSchema),
   updateTicketCoreInfoHandler,
 );
+
+router.put(
+  '/:ticketId/priority',
+  validateRequest(updateTicketPriorityFormDataSchema),
+  updateTicketPriorityHandler,
+);
+
+router.put(
+  '/:ticketId/category',
+  validateRequest(updateTicketCategoryFormDataSchema),
+  updateTicketCategoryHandler,
+);
+
+router.use('/:ticketId/comments', commentRouter);
 
 export default router;

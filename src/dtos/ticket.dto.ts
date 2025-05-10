@@ -127,3 +127,100 @@ export const updateTicketCoreInfoFormDataSchema = z.object({
 
 export type UpdateTicketCoreInput = z.infer<typeof updateTicketCoreInfoFormDataSchema>['body'];
 export type UpdateTicketParams = z.infer<typeof updateTicketCoreInfoFormDataSchema>['params'];
+
+export const getTicketDetailParamsSchema = z.object({
+  params: z.object({
+    teamId: z
+      .string({ required_error: 'Team ID pada path URL wajib diisi.' })
+      .trim()
+      .min(1, 'Team ID pada path URL tidak boleh kosong.'),
+    ticketId: z
+      .string({ required_error: 'Ticket ID pada path URL wajib diisi.' })
+      .trim()
+      .min(1, 'Ticket ID pada path URL tidak boleh kosong.'),
+  }),
+});
+
+export type GetTicketDetailParams = z.infer<typeof getTicketDetailParamsSchema>['params'];
+
+export interface TicketDetailOutput {
+  assignedAgent?: null | TicketUserOutput;
+  category?: {
+    id: string;
+    name: string;
+  } | null;
+  closedAt: null | number;
+  commentCount: number;
+  createdAt: null | number;
+  creator: TicketUserOutput;
+  description: string;
+  id: string;
+  labels: {
+    color: string;
+    id: string;
+    name: string;
+  }[];
+  number: string;
+  priority: TicketPriority;
+  resolvedAt: null | number;
+  status: TicketStatus;
+  subject: string;
+  team: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  updatedAt: null | number;
+}
+
+interface TicketUserOutput {
+  id: string;
+  name: string;
+}
+
+export const ticketActionParamsSchema = z.object({
+  params: z.object({
+    teamId: z
+      .string({ required_error: 'ID Tim pada path wajib diisi.' })
+      .trim()
+      .min(1, 'ID Tim pada path tidak boleh kosong.'),
+    ticketId: z
+      .string({ required_error: 'ID Tiket pada path wajib diisi.' })
+      .trim()
+      .min(1, 'ID Tiket pada path tidak boleh kosong.'),
+  }),
+});
+export type TicketActionParams = z.infer<typeof ticketActionParamsSchema>['params'];
+
+export const updateTicketPriorityBodySchema = z.object({
+  body: z.object({
+    priority: z.nativeEnum(TicketPriority, {
+      invalid_type_error: 'Prioritas tidak valid. Gunakan LOW, MEDIUM, HIGH, atau URGENT.',
+      required_error: 'Prioritas wajib diisi.', // Jika PUT, maka field ini wajib
+    }),
+  }),
+});
+
+export const updateTicketPriorityFormDataSchema = ticketActionParamsSchema.merge(
+  updateTicketPriorityBodySchema,
+);
+export type UpdateTicketPriorityInput = z.infer<typeof updateTicketPriorityFormDataSchema>['body'];
+
+export const updateTicketCategoryBodySchema = z.object({
+  body: z.object({
+    categoryId: z
+      .string({
+        invalid_type_error: 'ID Kategori harus berupa string atau null.',
+        required_error: 'ID Kategori wajib diisi jika diisi.',
+      })
+      .trim()
+      .min(1, 'ID Kategori tidak boleh string kosong jika diisi.')
+      .nullable(),
+  }),
+});
+
+export const updateTicketCategoryFormDataSchema = ticketActionParamsSchema.merge(
+  updateTicketCategoryBodySchema,
+);
+export type UpdateTicketCategoryInput = z.infer<typeof updateTicketCategoryBodySchema>['body'];
+export type UpdateTicketCategoryParams = TicketActionParams;
